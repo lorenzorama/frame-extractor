@@ -40,23 +40,27 @@ export default function JobForm({ onCreated }: { onCreated: (jobId: number) => v
         placeholder="YouTube URL"
         value={url}
         onChange={(e) => setUrl(e.target.value)}
-        className="border rounded px-3 py-2"
+        className="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         required
       />
       <input
         placeholder="Interval seconds (e.g. 5)"
         value={interval}
         onChange={(e) => setInterval_(e.target.value)}
-        className="border rounded px-3 py-2"
+        className="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
       />
       <input
         placeholder="Manual timestamps, comma-separated (e.g. 12.5, 30)"
         value={timestamps}
         onChange={(e) => setTimestamps(e.target.value)}
-        className="border rounded px-3 py-2"
+        className="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
       />
       {error && <p className="text-red-600 text-sm">{error}</p>}
-      <button type="submit" disabled={submitting} className="bg-black text-white rounded px-3 py-2 disabled:opacity-50">
+      <button
+        type="submit"
+        disabled={submitting}
+        className="bg-indigo-600 text-white rounded px-3 py-2 font-medium hover:bg-indigo-700 disabled:opacity-50"
+      >
         {submitting ? "Submitting..." : "Extract frames"}
       </button>
     </form>
