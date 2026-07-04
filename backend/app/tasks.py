@@ -64,6 +64,7 @@ def process_job(job_id: int) -> None:
                         session.commit()
             except Exception:
                 cues = []
+                session.rollback()
 
             job.status = JobStatus.extracting
             job.frames_total = len(timestamps)

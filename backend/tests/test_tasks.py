@@ -175,3 +175,42 @@ def test_process_job_succeeds_when_transcript_fails(tmp_path, monkeypatch):
     assert job.transcript_language is None
     frames = session.query(Frame).filter(Frame.job_id == job.id).all()
     assert all(f.caption is None for f in frames)
+
+
+def test_process_job_survives_transcript_db_failure(tmp_path, monkeypatch):
+    from app import tasks
+    from app.video import Cue
+
+    engine, session = make_session()
+    monkeypatch.setattr(tasks, "engine", engine)
+    monkeypatch.setattr("app.config.settings.data_dir", str(tmp_path))
+    monkeypatch.setattr(tasks, "get_video_info", lambda url: {"duration": 10.0})
+    monkeypatch.setattr(tasks, "download_video", lambda url, path: None)
+    monkeypatch.setattr(tasks, "extract_frame", lambda v, ts, dest: None)
+    monkeypatch.setattr(tasks, "pick_caption_language", lambda info: "en")
+    monkeypatch.setattr(tasks, "download_captions", lambda url, lang, stem: f"{stem}.{lang}.vtt")
+    real_exists = os.path.exists
+    monkeypatch.setattr(tasks.os.path, "exists", lambda p: True if str(p).endswith(".vtt") else real_exists(p))
+    # A cue with text=None trips the NOT NULL constraint on TranscriptCue.text
+    # at flush/commit time, causing a *real* IntegrityError from the DB -
+    # this genuinely poisons the SQLAlchemy session (unlike a plain raised
+    # RuntimeError), reproducing the production failure mode.
+    monkeypatch.setattr(tasks, "parse_vtt", lambda path: [Cue(0.0, 6.0, None)])
+
+    user = User(email="a@example.com", hashed_password="x")
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    job = Job(user_id=user.id, youtube_url="https://youtube.com/watch?v=abc", interval_seconds=5.0)
+    session.add(job)
+    session.commit()
+    session.refresh(job)
+
+    tasks.process_job(job.id)
+
+    session.refresh(job)
+    assert job.status == JobStatus.done          # transcript DB failure did NOT fail the job
+    assert job.transcript_language is None
+    frames = session.query(Frame).filter(Frame.job_id == job.id).all()
+    assert len(frames) == 3
+    assert all(f.caption is None for f in frames)
