@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { createJob } from "@/lib/jobs";
 
+const fieldClass =
+  "w-full rounded-lg border border-line px-3 py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-muted focus:border-ink";
+
 export default function JobForm({ onCreated }: { onCreated: (jobId: number) => void }) {
   const [url, setUrl] = useState("");
   const [interval, setInterval_] = useState("5");
@@ -35,33 +38,47 @@ export default function JobForm({ onCreated }: { onCreated: (jobId: number) => v
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3 max-w-md">
-      <input
-        placeholder="YouTube URL"
-        value={url}
-        onChange={(e) => setUrl(e.target.value)}
-        className="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        required
-      />
-      <input
-        placeholder="Interval seconds (e.g. 5)"
-        value={interval}
-        onChange={(e) => setInterval_(e.target.value)}
-        className="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-      />
-      <input
-        placeholder="Manual timestamps, comma-separated (e.g. 12.5, 30)"
-        value={timestamps}
-        onChange={(e) => setTimestamps(e.target.value)}
-        className="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-      />
-      {error && <p className="text-red-600 text-sm">{error}</p>}
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs font-medium text-muted">YouTube URL</label>
+        <input
+          placeholder="https://youtube.com/watch?v=…"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          className={fieldClass}
+          required
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-medium text-muted">Interval (seconds)</label>
+          <input
+            placeholder="5"
+            value={interval}
+            onChange={(e) => setInterval_(e.target.value)}
+            className={fieldClass}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-medium text-muted">Manual timestamps</label>
+          <input
+            placeholder="e.g. 12.5, 30, 90"
+            value={timestamps}
+            onChange={(e) => setTimestamps(e.target.value)}
+            className={fieldClass}
+          />
+        </div>
+      </div>
+
+      {error && <p className="text-sm text-brand">{error}</p>}
+
       <button
         type="submit"
         disabled={submitting}
-        className="bg-indigo-600 text-white rounded px-3 py-2 font-medium hover:bg-indigo-700 disabled:opacity-50"
+        className="self-start rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:opacity-50"
       >
-        {submitting ? "Submitting..." : "Extract frames"}
+        {submitting ? "Submitting…" : "Extract frames"}
       </button>
     </form>
   );

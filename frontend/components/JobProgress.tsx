@@ -34,14 +34,21 @@ export default function JobProgress({ jobId, onDone }: { jobId: number; onDone: 
   }, [jobId, onDone]);
 
   if (!event) {
-    return <p className="text-sm text-gray-500">Connecting...</p>;
+    return (
+      <div className="flex items-center gap-3 rounded-2xl border border-line bg-white px-5 py-4 text-sm text-muted">
+        <span className="h-2 w-2 animate-pulse rounded-full bg-brand" />
+        Connecting…
+      </div>
+    );
   }
 
   if (event.status === "failed") {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 rounded px-4 py-3 text-sm">
-        <p className="font-semibold mb-1">Failed</p>
-        <p>{event.error}</p>
+      <div className="rounded-2xl border border-red-200 bg-red-50 p-5">
+        <p className="mb-2 text-sm font-semibold text-brand">Extraction failed</p>
+        <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-white/70 p-3 font-mono text-xs text-ink">
+          {event.error}
+        </pre>
       </div>
     );
   }
@@ -52,16 +59,16 @@ export default function JobProgress({ jobId, onDone }: { jobId: number; onDone: 
       : 0;
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-2 text-sm text-gray-700">
-        <span className="capitalize">{event.status}&hellip;</span>
-        <span className="text-gray-500">
-          {event.frames_done} / {event.frames_total}
+    <div className="rounded-2xl border border-line bg-white p-5">
+      <div className="mb-3 flex items-center justify-between text-sm">
+        <span className="font-medium capitalize text-ink">{event.status}…</span>
+        <span className="text-muted">
+          {event.frames_done} / {event.frames_total} frames
         </span>
       </div>
-      <div className="bg-gray-100 rounded-full h-2 overflow-hidden">
+      <div className="h-2 overflow-hidden rounded-full bg-chip">
         <div
-          className="bg-indigo-600 h-full rounded-full transition-all"
+          className="h-full rounded-full bg-brand transition-all duration-500"
           style={{ width: `${percent}%` }}
         />
       </div>
