@@ -30,3 +30,14 @@ export async function listJobs(): Promise<Job[]> {
   if (!res.ok) throw new Error("Failed to list jobs");
   return res.json();
 }
+
+export interface Frame {
+  id: number;
+  timestamp_seconds: number;
+}
+
+export async function listFrames(jobId: number): Promise<Frame[]> {
+  const res = await apiFetch(`/jobs/${jobId}/frames`);
+  if (!res.ok) throw new Error("Failed to list frames");
+  return res.json();
+}
