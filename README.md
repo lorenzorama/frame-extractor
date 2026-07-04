@@ -27,3 +27,4 @@ pytest -v
 
 - Extracted frames and source videos are kept on disk (`videodata` Docker volume) until manually cleared.
 - Failed jobs are not automatically retried — resubmit from the UI.
+- When deploying, set `YTF_CORS_ORIGINS` to the frontend's exact production origin (e.g. the Vercel deployment URL) instead of leaving it at the localhost default.

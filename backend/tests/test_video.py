@@ -40,6 +40,10 @@ def test_download_video_invokes_yt_dlp(mock_run):
     args = mock_run.call_args[0][0]
     assert "yt-dlp" in args
     assert "/data/1/1/source.mp4" in args
+    assert "--merge-output-format" in args
+    assert "mp4" in args
+    assert "-f" in args
+    assert "bv*+ba/b" in args
 
 
 @patch("app.video.subprocess.run")
@@ -49,3 +53,4 @@ def test_extract_frame_invokes_ffmpeg(mock_run):
     args = mock_run.call_args[0][0]
     assert "ffmpeg" in args
     assert "-q:v" in args
+    assert "3" in args

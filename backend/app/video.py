@@ -40,7 +40,13 @@ def get_video_duration(url: str) -> float:
 
 def download_video(url: str, dest_path: str) -> None:
     subprocess.run(
-        ["yt-dlp", "--no-warnings", "-f", "mp4", "-o", dest_path, url],
+        [
+            "yt-dlp", "--no-warnings",
+            "-f", "bv*+ba/b",
+            "--merge-output-format", "mp4",
+            "-o", dest_path,
+            url,
+        ],
         check=True,
     )
 
@@ -52,7 +58,7 @@ def extract_frame(video_path: str, timestamp: float, dest_path: str) -> None:
             "-ss", str(timestamp),
             "-i", video_path,
             "-frames:v", "1",
-            "-q:v", "2",
+            "-q:v", "3",
             dest_path,
         ],
         check=True,
