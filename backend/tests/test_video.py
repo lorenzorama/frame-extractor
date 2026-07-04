@@ -7,12 +7,12 @@ from app.video import get_video_duration, download_video, extract_frame, compute
 
 def test_compute_timestamps_interval_only():
     result = compute_timestamps(duration=10.0, interval_seconds=5.0, manual_timestamps=None)
-    assert result == [0.0, 5.0, 10.0]
+    assert result == [0.0, 5.0, 9.5]
 
 
 def test_compute_timestamps_merges_manual_and_dedupes():
     result = compute_timestamps(duration=10.0, interval_seconds=5.0, manual_timestamps=[5.0, 7.5])
-    assert result == [0.0, 5.0, 7.5, 10.0]
+    assert result == [0.0, 5.0, 7.5, 9.5]
 
 
 def test_compute_timestamps_rejects_out_of_range():
@@ -23,6 +23,27 @@ def test_compute_timestamps_rejects_out_of_range():
 def test_compute_timestamps_requires_interval_or_manual():
     with pytest.raises(ValueError):
         compute_timestamps(duration=10.0, interval_seconds=None, manual_timestamps=None)
+
+
+def test_compute_timestamps_never_samples_at_or_past_duration():
+    # ffmpeg cannot reliably decode a frame exactly at (or past) a video's
+    # reported duration -- no frame exists there, so extraction fails.
+    # Regression test for a real job failure: seeking to a video's exact
+    # reported duration (62.98s) produced zero frames and a hard ffmpeg
+    # encoder error, while seeking to 62.9s succeeded.
+    result = compute_timestamps(duration=62.98, interval_seconds=None, manual_timestamps=[62.98])
+    assert result == [62.48]
+    assert result[-1] < 62.98
+
+
+def test_compute_timestamps_interval_final_timestamp_capped_below_duration():
+    result = compute_timestamps(duration=10.0, interval_seconds=5.0, manual_timestamps=None)
+    assert result[-1] < 10.0
+
+
+def test_compute_timestamps_very_short_duration_does_not_go_negative():
+    result = compute_timestamps(duration=0.2, interval_seconds=5.0, manual_timestamps=None)
+    assert result == [0.0]
 
 
 @patch("app.video.subprocess.run")

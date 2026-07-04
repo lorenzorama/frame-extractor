@@ -1,6 +1,12 @@
 import json
 import subprocess
 
+# ffmpeg cannot reliably decode a frame exactly at (or past) a video's
+# reported duration -- no frame exists there, and its fallback path for
+# "no filtered frames" fails to initialize the encoder without real frame
+# data. Cap sampling this far short of the reported duration.
+SAFE_END_BUFFER_SECONDS = 0.5
+
 
 def _run(args: list[str]) -> subprocess.CompletedProcess:
     try:
@@ -20,19 +26,21 @@ def compute_timestamps(
     if interval_seconds is None and not manual_timestamps:
         raise ValueError("Must provide interval_seconds and/or manual_timestamps")
 
+    safe_end = max(0.0, duration - SAFE_END_BUFFER_SECONDS)
+
     timestamps: set[float] = set()
 
     if interval_seconds is not None:
         t = 0.0
-        while t < duration:
+        while t < safe_end:
             timestamps.add(round(t, 3))
             t += interval_seconds
-        timestamps.add(round(duration, 3))
+        timestamps.add(round(safe_end, 3))
 
     for t in manual_timestamps or []:
         if t < 0 or t > duration:
             raise ValueError(f"Timestamp {t} is outside video duration {duration}")
-        timestamps.add(round(t, 3))
+        timestamps.add(round(min(t, safe_end), 3))
 
     return sorted(timestamps)
 
