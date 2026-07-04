@@ -46,7 +46,7 @@ def compute_timestamps(
 
 
 def get_video_duration(url: str) -> float:
-    result = _run(["yt-dlp", "--no-warnings", "-j", url])
+    result = _run(["yt-dlp", "--no-warnings", "--no-playlist", "-j", url])
     data = json.loads(result.stdout)
     return float(data["duration"])
 
@@ -54,7 +54,7 @@ def get_video_duration(url: str) -> float:
 def download_video(url: str, dest_path: str) -> None:
     _run(
         [
-            "yt-dlp", "--no-warnings",
+            "yt-dlp", "--no-warnings", "--no-playlist",
             "-f", "bv*+ba/b",
             "--merge-output-format", "mp4",
             "-o", dest_path,

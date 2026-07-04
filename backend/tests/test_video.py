@@ -55,6 +55,19 @@ def test_get_video_duration_parses_yt_dlp_json(mock_run):
 
 
 @patch("app.video.subprocess.run")
+def test_get_video_duration_passes_no_playlist(mock_run):
+    # Regression test: a URL with a playlist parameter
+    # (?v=abc&list=PLxxx) made yt-dlp -j dump one JSON object per playlist
+    # video (100 lines observed against a real playlist), and json.loads()
+    # raised "Extra data" trying to parse more than the first object.
+    # --no-playlist forces yt-dlp to treat the URL as a single video.
+    mock_run.return_value = MagicMock(stdout='{"duration": 123.4}', returncode=0)
+    get_video_duration("https://youtube.com/watch?v=abc&list=PLxxx")
+    args = mock_run.call_args[0][0]
+    assert "--no-playlist" in args
+
+
+@patch("app.video.subprocess.run")
 def test_download_video_invokes_yt_dlp(mock_run):
     mock_run.return_value = MagicMock(returncode=0)
     download_video("https://youtube.com/watch?v=abc", "/data/1/1/source.mp4")
@@ -65,6 +78,7 @@ def test_download_video_invokes_yt_dlp(mock_run):
     assert "mp4" in args
     assert "-f" in args
     assert "bv*+ba/b" in args
+    assert "--no-playlist" in args
 
 
 @patch("app.video.subprocess.run")
