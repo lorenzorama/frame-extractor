@@ -40,3 +40,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# repo-root .gitignore has a generic `lib/` rule (Python venv artifacts);
+# un-ignore this project's own lib/ directory
+!/lib/
+!/lib/**
