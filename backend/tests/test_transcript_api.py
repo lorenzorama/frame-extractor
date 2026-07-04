@@ -55,7 +55,7 @@ def test_transcript_endpoint_empty_when_none(mock_task, client, session):
 
     resp = client.get(f"/jobs/{job['id']}/transcript", headers=headers)
     assert resp.status_code == 200
-    assert resp.json() == {"language": None, "cues": []}
+    assert resp.json() == {"language": None, "source": None, "cues": []}
 
 
 @patch("app.routers.jobs.process_job")
@@ -68,3 +68,35 @@ def test_transcript_endpoint_not_owned_returns_404(mock_task, client):
 
     resp = client.get(f"/jobs/{job['id']}/transcript", headers=headers_b)
     assert resp.status_code == 404
+
+
+@patch("app.routers.jobs.process_job")
+def test_transcript_endpoint_returns_source(mock_task, client, session):
+    from app.models import Job, TranscriptCue
+
+    headers = signup_and_auth_headers(client)
+    job = client.post(
+        "/jobs", json={"youtube_url": "https://youtube.com/watch?v=abc", "interval_seconds": 5}, headers=headers
+    ).json()
+
+    db_job = session.get(Job, job["id"])
+    db_job.transcript_language = "en"
+    db_job.transcript_source = "whisper"
+    session.add(db_job)
+    session.add(TranscriptCue(job_id=job["id"], start_seconds=1.0, end_seconds=4.0, text="hi"))
+    session.commit()
+
+    resp = client.get(f"/jobs/{job['id']}/transcript", headers=headers)
+    assert resp.status_code == 200
+    assert resp.json()["source"] == "whisper"
+
+
+@patch("app.routers.jobs.process_job")
+def test_transcript_endpoint_source_null_when_none(mock_task, client):
+    headers = signup_and_auth_headers(client)
+    job = client.post(
+        "/jobs", json={"youtube_url": "https://youtube.com/watch?v=abc", "interval_seconds": 5}, headers=headers
+    ).json()
+    resp = client.get(f"/jobs/{job['id']}/transcript", headers=headers)
+    assert resp.status_code == 200
+    assert resp.json()["source"] is None

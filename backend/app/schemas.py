@@ -57,4 +57,5 @@ class TranscriptCueResponse(BaseModel):
 
 class TranscriptResponse(BaseModel):
     language: Optional[str] = None
+    source: Optional[str] = None
     cues: list[TranscriptCueResponse]

@@ -103,7 +103,7 @@ def get_transcript(job_id: int, session: Session = Depends(get_session), user: U
     cues = session.exec(
         select(TranscriptCue).where(TranscriptCue.job_id == job_id).order_by(TranscriptCue.start_seconds)
     ).all()
-    return TranscriptResponse(language=job.transcript_language, cues=cues)
+    return TranscriptResponse(language=job.transcript_language, source=job.transcript_source, cues=cues)
 
 
 @router.get("/{job_id}/zip")
