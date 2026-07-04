@@ -1,5 +1,7 @@
+import io
 import json
 import time
+import zipfile
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -7,8 +9,8 @@ from sqlmodel import Session, select
 
 from app.database import engine, get_session
 from app.dependencies import get_current_user
-from app.models import Job, User
-from app.schemas import JobCreateRequest, JobResponse
+from app.models import Frame, Job, User
+from app.schemas import FrameResponse, JobCreateRequest, JobResponse
 from app.tasks import process_job
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
@@ -77,3 +79,28 @@ async def stream_job(job_id: int, session: Session = Depends(get_session), user:
                 time.sleep(1)
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+@router.get("/{job_id}/frames", response_model=list[FrameResponse])
+def list_frames(job_id: int, session: Session = Depends(get_session), user: User = Depends(get_current_user)):
+    _get_owned_job(job_id, session, user)
+    frames = session.exec(select(Frame).where(Frame.job_id == job_id).order_by(Frame.timestamp_seconds)).all()
+    return frames
+
+
+@router.get("/{job_id}/zip")
+def download_zip(job_id: int, session: Session = Depends(get_session), user: User = Depends(get_current_user)):
+    _get_owned_job(job_id, session, user)
+    frames = session.exec(select(Frame).where(Frame.job_id == job_id).order_by(Frame.timestamp_seconds)).all()
+
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as zf:
+        for frame in frames:
+            zf.write(frame.file_path, arcname=f"{frame.timestamp_seconds}.jpg")
+    buffer.seek(0)
+
+    return StreamingResponse(
+        buffer,
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename=job_{job_id}_frames.zip"},
+    )

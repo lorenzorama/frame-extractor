@@ -35,3 +35,11 @@ class JobResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class FrameResponse(BaseModel):
+    id: int
+    timestamp_seconds: float
+
+    class Config:
+        from_attributes = True
