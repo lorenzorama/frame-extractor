@@ -8,14 +8,14 @@ def signup_and_auth_headers(client, email="a@example.com"):
     return {"Authorization": f"Bearer {token}"}
 
 
-@patch("app.routers.jobs.process_job")
-def test_list_frames_for_job(mock_task, client, session):
+@patch("app.routers.jobs.dispatch_next")
+def test_list_frames_for_job(mock_dispatch, client, session):
     from app.models import Frame
 
     headers = signup_and_auth_headers(client)
     job = client.post(
-        "/jobs", json={"youtube_url": "https://youtube.com/watch?v=abc", "interval_seconds": 5}, headers=headers
-    ).json()
+        "/jobs", json={"youtube_urls": ["https://youtube.com/watch?v=abc"], "interval_seconds": 5}, headers=headers
+    ).json()[0]
 
     frame = Frame(job_id=job["id"], timestamp_seconds=5.0, file_path="/tmp/does-not-matter.jpg")
     session.add(frame)
@@ -26,14 +26,14 @@ def test_list_frames_for_job(mock_task, client, session):
     assert resp.json() == [{"id": frame.id, "timestamp_seconds": 5.0, "caption": None}]
 
 
-@patch("app.routers.jobs.process_job")
-def test_get_frame_image_returns_file(mock_task, client, session, tmp_path):
+@patch("app.routers.jobs.dispatch_next")
+def test_get_frame_image_returns_file(mock_dispatch, client, session, tmp_path):
     from app.models import Frame
 
     headers = signup_and_auth_headers(client)
     job = client.post(
-        "/jobs", json={"youtube_url": "https://youtube.com/watch?v=abc", "interval_seconds": 5}, headers=headers
-    ).json()
+        "/jobs", json={"youtube_urls": ["https://youtube.com/watch?v=abc"], "interval_seconds": 5}, headers=headers
+    ).json()[0]
 
     image_path = tmp_path / "frame.jpg"
     image_path.write_bytes(b"\xff\xd8\xff\xd9")
@@ -48,16 +48,16 @@ def test_get_frame_image_returns_file(mock_task, client, session, tmp_path):
     assert resp.content == b"\xff\xd8\xff\xd9"
 
 
-@patch("app.routers.jobs.process_job")
-def test_get_frame_image_not_owned_returns_404(mock_task, client, session, tmp_path):
+@patch("app.routers.jobs.dispatch_next")
+def test_get_frame_image_not_owned_returns_404(mock_dispatch, client, session, tmp_path):
     from app.models import Frame
 
     headers_a = signup_and_auth_headers(client, "a@example.com")
     headers_b = signup_and_auth_headers(client, "b@example.com")
 
     job = client.post(
-        "/jobs", json={"youtube_url": "https://youtube.com/watch?v=abc", "interval_seconds": 5}, headers=headers_a
-    ).json()
+        "/jobs", json={"youtube_urls": ["https://youtube.com/watch?v=abc"], "interval_seconds": 5}, headers=headers_a
+    ).json()[0]
 
     image_path = tmp_path / "frame.jpg"
     image_path.write_bytes(b"\xff\xd8\xff\xd9")

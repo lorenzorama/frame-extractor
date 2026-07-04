@@ -19,7 +19,7 @@ class TokenResponse(BaseModel):
 
 
 class JobCreateRequest(BaseModel):
-    youtube_url: str
+    youtube_urls: list[str]
     interval_seconds: Optional[float] = None
     manual_timestamps: Optional[list[float]] = None
 

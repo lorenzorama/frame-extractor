@@ -10,36 +10,46 @@ from sqlmodel import Session, select
 
 from app.database import engine, get_session
 from app.dependencies import get_current_user
-from app.models import Frame, Job, TranscriptCue, User
+from app.dispatch import dispatch_next
+from app.models import Frame, Job, JobStatus, TranscriptCue, User
 from app.schemas import FrameResponse, JobCreateRequest, JobResponse, TranscriptResponse
 from app.security import decode_access_token
-from app.tasks import process_job
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
 
-@router.post("", response_model=JobResponse, status_code=201)
-def create_job(
+@router.post("", response_model=list[JobResponse], status_code=201)
+def create_jobs(
     payload: JobCreateRequest,
     session: Session = Depends(get_session),
     user: User = Depends(get_current_user),
 ):
+    urls = [u.strip() for u in payload.youtube_urls if u.strip()]
+    if not urls:
+        raise HTTPException(status_code=422, detail="Provide at least one YouTube URL")
+    if len(urls) > 50:
+        raise HTTPException(status_code=422, detail="Too many URLs (max 50 per batch)")
     if payload.interval_seconds is None and not payload.manual_timestamps:
         raise HTTPException(status_code=422, detail="Provide interval_seconds and/or manual_timestamps")
 
-    job = Job(
-        user_id=user.id,
-        youtube_url=payload.youtube_url,
-        interval_seconds=payload.interval_seconds,
-        manual_timestamps=payload.manual_timestamps,
-    )
-    session.add(job)
+    jobs = []
+    for url in urls:
+        job = Job(
+            user_id=user.id,
+            youtube_url=url,
+            interval_seconds=payload.interval_seconds,
+            manual_timestamps=payload.manual_timestamps,
+            status=JobStatus.waiting,
+        )
+        session.add(job)
+        jobs.append(job)
     session.commit()
-    session.refresh(job)
+    for job in jobs:
+        session.refresh(job)
 
-    process_job.delay(job.id)
+    dispatch_next(user.id)
 
-    return job
+    return jobs
 
 
 @router.get("", response_model=list[JobResponse])
