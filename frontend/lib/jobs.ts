@@ -18,7 +18,10 @@ export interface CreateJobInput {
 
 export async function createJob(input: CreateJobInput): Promise<Job> {
   const res = await apiFetch("/jobs", { method: "POST", body: JSON.stringify(input) });
-  if (!res.ok) throw new Error((await res.json()).detail || "Failed to create job");
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: "Failed to create job" }));
+    throw new Error(body.detail || "Failed to create job");
+  }
   return res.json();
 }
 

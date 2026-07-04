@@ -19,7 +19,8 @@ export default function JobForm({ onCreated }: { onCreated: (jobId: number) => v
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean)
-        .map(Number);
+        .map(Number)
+        .filter((n) => !Number.isNaN(n));
       const job = await createJob({
         youtube_url: url,
         interval_seconds: interval ? Number(interval) : undefined,
