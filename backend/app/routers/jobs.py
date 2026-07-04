@@ -3,7 +3,7 @@ import json
 import time
 import zipfile
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from fastapi.responses import StreamingResponse
 from jose import JWTError
 from sqlmodel import Session, select
@@ -68,6 +68,16 @@ def _get_owned_job(job_id: int, session: Session, user: User) -> Job:
 @router.get("/{job_id}", response_model=JobResponse)
 def get_job(job_id: int, session: Session = Depends(get_session), user: User = Depends(get_current_user)):
     return _get_owned_job(job_id, session, user)
+
+
+@router.delete("/{job_id}", status_code=204)
+def cancel_job(job_id: int, session: Session = Depends(get_session), user: User = Depends(get_current_user)):
+    job = _get_owned_job(job_id, session, user)
+    if job.status != JobStatus.waiting:
+        raise HTTPException(status_code=409, detail="Only waiting jobs can be cancelled")
+    session.delete(job)
+    session.commit()
+    return Response(status_code=204)
 
 
 @router.get("/{job_id}/stream")

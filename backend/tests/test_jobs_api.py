@@ -136,3 +136,54 @@ def test_stream_job_invalid_token_returns_401(mock_dispatch, client):
 
     assert resp.status_code == 401
     assert resp.json()["detail"] == "Invalid token"
+
+
+@patch("app.routers.jobs.dispatch_next")
+def test_cancel_waiting_job(mock_dispatch, client, session):
+    from app.models import Job, JobStatus
+
+    headers = signup_and_auth_headers(client)
+    created = client.post(
+        "/jobs", json={"youtube_urls": ["https://youtube.com/watch?v=a"], "interval_seconds": 5}, headers=headers
+    ).json()[0]
+
+    # ensure it's waiting (dispatch is mocked, so it stays waiting)
+    job = session.get(Job, created["id"])
+    job.status = JobStatus.waiting
+    session.add(job)
+    session.commit()
+
+    resp = client.delete(f"/jobs/{created['id']}", headers=headers)
+    assert resp.status_code == 204
+    assert session.get(Job, created["id"]) is None
+
+
+@patch("app.routers.jobs.dispatch_next")
+def test_cancel_non_waiting_job_conflict(mock_dispatch, client, session):
+    from app.models import Job, JobStatus
+
+    headers = signup_and_auth_headers(client)
+    created = client.post(
+        "/jobs", json={"youtube_urls": ["https://youtube.com/watch?v=a"], "interval_seconds": 5}, headers=headers
+    ).json()[0]
+
+    job = session.get(Job, created["id"])
+    job.status = JobStatus.downloading
+    session.add(job)
+    session.commit()
+
+    resp = client.delete(f"/jobs/{created['id']}", headers=headers)
+    assert resp.status_code == 409
+    assert session.get(Job, created["id"]) is not None
+
+
+@patch("app.routers.jobs.dispatch_next")
+def test_cancel_other_users_job_404(mock_dispatch, client):
+    headers_a = signup_and_auth_headers(client, "a@example.com")
+    headers_b = signup_and_auth_headers(client, "b@example.com")
+    created = client.post(
+        "/jobs", json={"youtube_urls": ["https://youtube.com/watch?v=a"], "interval_seconds": 5}, headers=headers_a
+    ).json()[0]
+
+    resp = client.delete(f"/jobs/{created['id']}", headers=headers_b)
+    assert resp.status_code == 404
