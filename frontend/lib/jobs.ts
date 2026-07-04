@@ -34,10 +34,28 @@ export async function listJobs(): Promise<Job[]> {
 export interface Frame {
   id: number;
   timestamp_seconds: number;
+  caption: string | null;
+}
+
+export interface TranscriptCue {
+  start_seconds: number;
+  end_seconds: number;
+  text: string;
+}
+
+export interface Transcript {
+  language: string | null;
+  cues: TranscriptCue[];
 }
 
 export async function listFrames(jobId: number): Promise<Frame[]> {
   const res = await apiFetch(`/jobs/${jobId}/frames`);
   if (!res.ok) throw new Error("Failed to list frames");
+  return res.json();
+}
+
+export async function getTranscript(jobId: number): Promise<Transcript> {
+  const res = await apiFetch(`/jobs/${jobId}/transcript`);
+  if (!res.ok) throw new Error("Failed to load transcript");
   return res.json();
 }
