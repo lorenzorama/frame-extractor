@@ -3,7 +3,7 @@ import json
 import time
 import zipfile
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlmodel import Session, select
 
@@ -11,6 +11,7 @@ from app.database import engine, get_session
 from app.dependencies import get_current_user
 from app.models import Frame, Job, User
 from app.schemas import FrameResponse, JobCreateRequest, JobResponse
+from app.security import decode_access_token
 from app.tasks import process_job
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
@@ -59,7 +60,11 @@ def get_job(job_id: int, session: Session = Depends(get_session), user: User = D
 
 
 @router.get("/{job_id}/stream")
-async def stream_job(job_id: int, session: Session = Depends(get_session), user: User = Depends(get_current_user)):
+async def stream_job(job_id: int, token: str = Query(...), session: Session = Depends(get_session)):
+    user_id = decode_access_token(token)
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid token")
     _get_owned_job(job_id, session, user)
 
     def event_generator():

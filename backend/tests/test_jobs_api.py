@@ -10,6 +10,11 @@ def signup_and_auth_headers(client, email="a@example.com"):
     return {"Authorization": f"Bearer {token}"}
 
 
+def signup_and_get_token(client, email="a@example.com"):
+    resp = client.post("/auth/signup", json={"email": email, "password": "secret123"})
+    return resp.json()["access_token"]
+
+
 def test_create_job_requires_auth(client):
     resp = client.post("/jobs", json={"youtube_url": "https://youtube.com/watch?v=abc", "interval_seconds": 5})
     assert resp.status_code == 401
@@ -73,7 +78,8 @@ def test_stream_job_terminal_state_yields_event_and_closes(mock_task, client, se
     # the same in-memory engine the test session/client use.
     monkeypatch.setattr(routers.jobs, "engine", session.get_bind())
 
-    headers = signup_and_auth_headers(client)
+    token = signup_and_get_token(client)
+    headers = {"Authorization": f"Bearer {token}"}
     created = client.post(
         "/jobs", json={"youtube_url": "https://youtube.com/watch?v=abc", "interval_seconds": 5}, headers=headers
     ).json()
@@ -87,7 +93,7 @@ def test_stream_job_terminal_state_yields_event_and_closes(mock_task, client, se
     session.add(job)
     session.commit()
 
-    with client.stream("GET", f"/jobs/{created['id']}/stream", headers=headers) as resp:
+    with client.stream("GET", f"/jobs/{created['id']}/stream", params={"token": token}) as resp:
         assert resp.status_code == 200
         assert resp.headers["content-type"].startswith("text/event-stream")
 
