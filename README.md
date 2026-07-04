@@ -28,6 +28,19 @@ pytest -v
 - Extracted frames and source videos are kept on disk (`videodata` Docker volume) until manually cleared.
 - Failed jobs are not automatically retried — resubmit from the UI.
 - When deploying, set `YTF_CORS_ORIGINS` to the frontend's exact production origin (e.g. the Vercel deployment URL) instead of leaving it at the localhost default.
+- **Transcripts.** If a video has YouTube captions, they're used directly. If not, the
+  worker falls back to local speech-to-text with faster-whisper (`base`, CPU int8),
+  shown as a `transcribing` status. This is best-effort — a failure or a video longer
+  than `YTF_WHISPER_MAX_DURATION_SECONDS` (default 3600 s) leaves the job succeeding with
+  frames and no transcript.
+- **Whisper config** (env, `YTF_` prefix): `WHISPER_ENABLED` (default `true`),
+  `WHISPER_MODEL` (default `base`), `WHISPER_MAX_DURATION_SECONDS` (default `3600`),
+  `WHISPER_COMPUTE_TYPE` (default `int8`). The worker image pre-bakes the `base` model;
+  if you change `WHISPER_MODEL`, update the pre-download line in `backend/Dockerfile`.
+- **Worker resources.** Each worker process loads its own Whisper model (~150 MB for
+  `base`). The compose file runs the worker at `--concurrency=2`; raise/lower it to suit
+  your host. Do not set a short Celery task time limit — a 30-minute video can take
+  ~15 min to transcribe on CPU.
 
 ## Legal & disclaimer
 

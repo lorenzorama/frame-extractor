@@ -5,6 +5,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -r
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Pre-download the faster-whisper model so the first transcription job doesn't
+# have to fetch it at runtime. Adjust the model name if YTF_WHISPER_MODEL changes.
+RUN python -c "from faster_whisper import WhisperModel; WhisperModel('base', compute_type='int8')"
+
 COPY app ./app
 COPY alembic.ini .
 COPY alembic ./alembic
