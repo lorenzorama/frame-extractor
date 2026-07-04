@@ -3,7 +3,7 @@ import { apiFetch } from "@/lib/api";
 export interface Job {
   id: number;
   youtube_url: string;
-  status: "pending" | "downloading" | "extracting" | "done" | "failed";
+  status: "pending" | "downloading" | "extracting" | "transcribing" | "done" | "failed";
   error_message: string | null;
   frames_total: number;
   frames_done: number;
