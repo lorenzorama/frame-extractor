@@ -15,7 +15,7 @@ export default function JobPage() {
     <>
       <Nav />
       <main className="max-w-2xl mx-auto mt-12 px-4">
-        <h1 className="text-xl font-semibold mb-6">Job #{jobId}</h1>
+        <h1 className="text-xl font-semibold mb-6 text-gray-900">Job #{jobId}</h1>
         {!done && <JobProgress jobId={jobId} onDone={() => setDone(true)} />}
         {done && <JobGallery jobId={jobId} />}
       </main>

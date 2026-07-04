@@ -1,11 +1,18 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { logout } from "@/lib/api";
+import { getToken, logout } from "@/lib/api";
 
 export default function Nav() {
   const router = useRouter();
+
+  useEffect(() => {
+    if (!getToken()) {
+      router.push("/login");
+    }
+  }, [router]);
 
   function handleLogout() {
     logout();
