@@ -35,3 +35,7 @@ export function login(email: string, password: string): Promise<void> {
 export function signup(email: string, password: string): Promise<void> {
   return authRequest("/auth/signup", email, password);
 }
+
+export function logout(): void {
+  localStorage.removeItem("access_token");
+}
