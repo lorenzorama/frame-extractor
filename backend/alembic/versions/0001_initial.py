@@ -66,3 +66,9 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_user_email'), table_name='user')
     op.drop_table('user')
     # ### end Alembic commands ###
+    # Explicitly drop the Postgres ENUM type created implicitly by the
+    # `job.status` column above. SQLAlchemy/Alembic does not drop ENUM
+    # types automatically when a table referencing them is dropped, so
+    # without this, re-running upgrade() after downgrade() would fail
+    # with `DuplicateObject: type "jobstatus" already exists`.
+    sa.Enum(name='jobstatus').drop(op.get_bind(), checkfirst=True)
