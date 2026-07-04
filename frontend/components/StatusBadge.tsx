@@ -1,6 +1,7 @@
 // Minimal status chips. "Active" states (downloading/extracting) share a
 // soft blue; done = green; failed = brand red; pending = neutral chip.
 const STATUS_STYLES: Record<string, string> = {
+  waiting: "bg-chip text-muted",
   pending: "bg-chip text-muted",
   downloading: "bg-blue-50 text-blue-700",
   extracting: "bg-blue-50 text-blue-700",
