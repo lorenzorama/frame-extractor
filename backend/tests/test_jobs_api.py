@@ -107,3 +107,16 @@ def test_stream_job_terminal_state_yields_event_and_closes(mock_task, client, se
     assert len(events) >= 1
     assert events[0].startswith("data: ")
     assert '"status": "done"' in events[0] or '"status":"done"' in events[0]
+
+
+@patch("app.routers.jobs.process_job")
+def test_stream_job_invalid_token_returns_401(mock_task, client):
+    headers = signup_and_auth_headers(client)
+    created = client.post(
+        "/jobs", json={"youtube_url": "https://youtube.com/watch?v=abc", "interval_seconds": 5}, headers=headers
+    ).json()
+
+    resp = client.get(f"/jobs/{created['id']}/stream", params={"token": "not-a-real-token"})
+
+    assert resp.status_code == 401
+    assert resp.json()["detail"] == "Invalid token"

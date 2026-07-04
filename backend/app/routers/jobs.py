@@ -5,6 +5,7 @@ import zipfile
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
+from jose import JWTError
 from sqlmodel import Session, select
 
 from app.database import engine, get_session
@@ -61,7 +62,10 @@ def get_job(job_id: int, session: Session = Depends(get_session), user: User = D
 
 @router.get("/{job_id}/stream")
 async def stream_job(job_id: int, token: str = Query(...), session: Session = Depends(get_session)):
-    user_id = decode_access_token(token)
+    try:
+        user_id = decode_access_token(token)
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
     user = session.get(User, user_id)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid token")
