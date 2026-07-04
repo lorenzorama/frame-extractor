@@ -28,25 +28,7 @@ def process_job(job_id: int) -> None:
         try:
             job_dir = os.path.join(settings.data_dir, str(job.user_id), str(job.id))
             frames_dir = os.path.join(job_dir, "frames")
-            try:
-                os.makedirs(frames_dir, exist_ok=True)
-            except FileNotFoundError:
-                # os.path.exists() can be unreliable in some test contexts
-                # (e.g. monkeypatched); fall back to a manual recursive
-                # creation that relies on os.path.isdir/os.mkdir instead.
-                pending = []
-                p = frames_dir
-                while p and not os.path.isdir(p):
-                    pending.append(p)
-                    parent = os.path.dirname(p)
-                    if parent == p:
-                        break
-                    p = parent
-                for d in reversed(pending):
-                    try:
-                        os.mkdir(d)
-                    except FileExistsError:
-                        pass
+            os.makedirs(frames_dir, exist_ok=True)
             source_path = os.path.join(job_dir, "source.mp4")
 
             job.status = JobStatus.downloading

@@ -111,7 +111,12 @@ def test_process_job_populates_transcript(tmp_path, monkeypatch):
     monkeypatch.setattr(tasks, "extract_frame", lambda v, ts, dest: None)
     monkeypatch.setattr(tasks, "pick_caption_language", lambda info: "en")
     monkeypatch.setattr(tasks, "download_captions", lambda url, lang, stem: f"{stem}.{lang}.vtt")
-    monkeypatch.setattr(tasks.os.path, "exists", lambda p: True)
+    real_exists = os.path.exists
+    monkeypatch.setattr(
+        tasks.os.path,
+        "exists",
+        lambda p: True if str(p).endswith(".vtt") else real_exists(p),
+    )
     monkeypatch.setattr(tasks, "parse_vtt", lambda path: [Cue(0.0, 6.0, "hello"), Cue(6.0, 10.0, "world")])
 
     user = User(email="a@example.com", hashed_password="x")
