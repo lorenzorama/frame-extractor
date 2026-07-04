@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlmodel import Session, select
 
-from app.database import get_session
+from app.database import engine, get_session
 from app.dependencies import get_current_user
 from app.models import Job, User
 from app.schemas import JobCreateRequest, JobResponse
@@ -61,18 +61,19 @@ async def stream_job(job_id: int, session: Session = Depends(get_session), user:
     _get_owned_job(job_id, session, user)
 
     def event_generator():
-        while True:
-            job = session.get(Job, job_id)
-            session.refresh(job)
-            payload = {
-                "status": job.status,
-                "frames_done": job.frames_done,
-                "frames_total": job.frames_total,
-                "error": job.error_message,
-            }
-            yield f"data: {json.dumps(payload)}\n\n"
-            if job.status in ("done", "failed"):
-                break
-            time.sleep(1)
+        with Session(engine) as gen_session:
+            while True:
+                job = gen_session.get(Job, job_id)
+                gen_session.refresh(job)
+                payload = {
+                    "status": job.status,
+                    "frames_done": job.frames_done,
+                    "frames_total": job.frames_total,
+                    "error": job.error_message,
+                }
+                yield f"data: {json.dumps(payload)}\n\n"
+                if job.status in ("done", "failed"):
+                    break
+                time.sleep(1)
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
