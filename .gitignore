@@ -221,3 +221,7 @@ __marimo__/
 .streamlit/secrets.toml
 .claude
 .superpowers
+urls.txt
+
+# Output folder
+/output/

@@ -35,6 +35,7 @@ services:
       - redis
     volumes:
       - videodata:/data
+      - ${OUTPUT_DIR:-./output}:/data/output
 
 volumes:
   pgdata:

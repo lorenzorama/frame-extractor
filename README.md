@@ -28,6 +28,16 @@ pytest -v
 - Extracted frames and source videos are kept on disk (`videodata` Docker volume) until manually cleared.
 - Failed jobs are not automatically retried — resubmit from the UI.
 - When deploying, set `YTF_CORS_ORIGINS` to the frontend's exact production origin (e.g. the Vercel deployment URL) instead of leaving it at the localhost default.
+
+### Saving results to a folder (server-side)
+
+Check **"Also save finished results to the server output folder"** on the job
+form to have the worker write each finished job's zip to a host folder as
+`video_<n>.zip` (numbered by the link's position in the batch). Set the host
+folder with `OUTPUT_DIR` in `.env` (default `./output`); it is bind-mounted into
+the worker. An optional **Subfolder** field writes into `OUTPUT_DIR/<subfolder>/`.
+Existing files are never overwritten (`video_1 (2).zip`). This is independent of
+the in-browser "auto-save to a folder" option.
 - **Transcripts.** If a video has YouTube captions, they're used directly. If not, the
   worker falls back to local speech-to-text with faster-whisper (`base`, CPU int8),
   shown as a `transcribing` status. This is best-effort — a failure or a video longer
