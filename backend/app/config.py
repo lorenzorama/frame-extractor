@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60 * 24
     data_dir: str = "/data"
+    output_dir: str = "/data/output"
     cors_origins: list[str] = ["http://localhost:3000"]
     whisper_enabled: bool = True
     whisper_model: str = "base"

@@ -34,6 +34,9 @@ class Job(SQLModel, table=True):
     frames_done: int = Field(default=0)
     transcript_language: Optional[str] = None
     transcript_source: Optional[str] = None
+    save_to_output: bool = Field(default=False)
+    output_subdir: Optional[str] = None
+    output_index: Optional[int] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
