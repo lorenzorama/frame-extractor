@@ -36,6 +36,12 @@ export async function listJobs(): Promise<Job[]> {
   return res.json();
 }
 
+export async function fetchJobZip(jobId: number): Promise<Blob> {
+  const res = await apiFetch(`/jobs/${jobId}/zip`);
+  if (!res.ok) throw new Error("Failed to fetch zip");
+  return res.blob();
+}
+
 export interface Frame {
   id: number;
   timestamp_seconds: number;

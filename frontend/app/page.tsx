@@ -1,25 +1,64 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Nav from "@/components/Nav";
 import JobForm from "@/components/JobForm";
 import StatusBadge from "@/components/StatusBadge";
-import { listJobs, cancelJob, Job } from "@/lib/jobs";
+import { listJobs, cancelJob, fetchJobZip, Job } from "@/lib/jobs";
+import { resolveZipName, writeZipToDir, DirectoryHandle, AutoSaveBatch } from "@/lib/autosave";
 import { getToken } from "@/lib/api";
 
 export default function HomePage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
+  const [autoSaveError, setAutoSaveError] = useState<string | null>(null);
   const router = useRouter();
+
+  // jobId -> where/which name to save when it finishes. In a ref because handles
+  // are not serializable and this must survive re-renders without triggering them.
+  const pendingSaves = useRef<Map<number, { position: number; dir: DirectoryHandle }>>(new Map());
+  // Jobs whose write is in flight, so overlapping polls don't start it twice.
+  const savingIds = useRef<Set<number>>(new Set());
+
+  const processAutoSaves = useCallback(async (current: Job[]) => {
+    for (const job of current) {
+      const entry = pendingSaves.current.get(job.id);
+      if (!entry) continue;
+      if (job.status === "failed") {
+        pendingSaves.current.delete(job.id); // no file; its number is skipped
+        continue;
+      }
+      if (job.status !== "done") continue;
+      if (savingIds.current.has(job.id)) continue;
+      savingIds.current.add(job.id);
+      try {
+        const blob = await fetchJobZip(job.id);
+        const name = await resolveZipName(entry.dir, `video_${entry.position}`);
+        await writeZipToDir(entry.dir, name, blob);
+        pendingSaves.current.delete(job.id);
+      } catch (err) {
+        // Give up on this one, keep saving the rest of the batch.
+        pendingSaves.current.delete(job.id);
+        setAutoSaveError(
+          `Couldn't save video_${entry.position}.zip — ${err instanceof Error ? err.message : "write failed"}`
+        );
+      } finally {
+        savingIds.current.delete(job.id);
+      }
+    }
+  }, []);
 
   const reload = useCallback(() => {
     listJobs()
-      .then(setJobs)
+      .then((current) => {
+        setJobs(current);
+        void processAutoSaves(current);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [processAutoSaves]);
 
   useEffect(() => {
     if (!getToken()) {
@@ -31,10 +70,21 @@ export default function HomePage() {
     return () => clearInterval(timer);
   }, [router, reload]);
 
+  function handleCreated(batch: AutoSaveBatch) {
+    const dir = batch.dirHandle;
+    if (dir) {
+      batch.jobs.forEach((job, i) => {
+        pendingSaves.current.set(job.id, { position: i + 1, dir });
+      });
+    }
+    reload();
+  }
+
   async function handleCancel(jobId: number) {
     try {
       await cancelJob(jobId);
       setJobs((prev) => prev.filter((j) => j.id !== jobId));
+      pendingSaves.current.delete(jobId);
     } catch {
       // ignore; next poll will reconcile
     }
@@ -54,8 +104,12 @@ export default function HomePage() {
         </header>
 
         <section className="rounded-2xl border border-line bg-white p-6">
-          <JobForm onCreated={reload} />
+          <JobForm onCreated={handleCreated} />
         </section>
+
+        {autoSaveError && (
+          <p className="mt-4 text-sm text-red-600">{autoSaveError}</p>
+        )}
 
         <section className="mt-10">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">Your jobs</h2>
