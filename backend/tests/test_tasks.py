@@ -414,3 +414,69 @@ def test_process_job_dispatch_failure_does_not_crash(tmp_path, monkeypatch):
 
     session.refresh(job)
     assert job.status == JobStatus.done  # job outcome unaffected by dispatch failure
+
+
+@patch("app.tasks.extract_frame")
+@patch("app.tasks.download_video")
+@patch("app.tasks.get_video_info", return_value={"duration": 10.0})
+def test_process_job_skips_unextractable_frame(mock_info, mock_download, mock_extract, tmp_path, monkeypatch):
+    """A single frame that can't be extracted (e.g. a near-EOF seek past the last
+    video frame) must not fail the whole job."""
+    from app import tasks
+
+    engine, session = make_session()
+    monkeypatch.setattr(tasks, "engine", engine)
+    monkeypatch.setattr("app.config.settings.data_dir", str(tmp_path))
+
+    def flaky(source, ts, dest):
+        if ts == 5.0:
+            raise RuntimeError("ffmpeg: No filtered frames for output stream; Conversion failed")
+
+    mock_extract.side_effect = flaky
+
+    user = User(email="a@example.com", hashed_password="x")
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+
+    job = Job(user_id=user.id, youtube_url="https://youtube.com/watch?v=abc", interval_seconds=5.0)
+    session.add(job)
+    session.commit()
+    session.refresh(job)
+
+    tasks.process_job(job.id)
+
+    session.refresh(job)
+    assert job.status == JobStatus.done
+    assert job.frames_done == 2
+    frames = session.query(Frame).filter(Frame.job_id == job.id).all()
+    assert len(frames) == 2
+    assert 5.0 not in [f.timestamp_seconds for f in frames]
+
+
+@patch("app.tasks.extract_frame", side_effect=RuntimeError("Conversion failed"))
+@patch("app.tasks.download_video")
+@patch("app.tasks.get_video_info", return_value={"duration": 10.0})
+def test_process_job_fails_when_no_frames_extractable(mock_info, mock_download, mock_extract, tmp_path, monkeypatch):
+    """If not a single frame can be extracted, the job is a genuine failure."""
+    from app import tasks
+
+    engine, session = make_session()
+    monkeypatch.setattr(tasks, "engine", engine)
+    monkeypatch.setattr("app.config.settings.data_dir", str(tmp_path))
+
+    user = User(email="a@example.com", hashed_password="x")
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+
+    job = Job(user_id=user.id, youtube_url="https://youtube.com/watch?v=abc", interval_seconds=5.0)
+    session.add(job)
+    session.commit()
+    session.refresh(job)
+
+    tasks.process_job(job.id)
+
+    session.refresh(job)
+    assert job.status == JobStatus.failed
+    assert job.frames_done == 0

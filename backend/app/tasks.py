@@ -81,7 +81,13 @@ def process_job(job_id: int) -> None:
 
                 for ts in timestamps:
                     frame_path = os.path.join(frames_dir, f"{ts}.jpg")
-                    extract_frame(source_path, ts, frame_path)
+                    try:
+                        extract_frame(source_path, ts, frame_path)
+                    except Exception:
+                        # A single frame that can't be extracted (e.g. a seek
+                        # landing past the last decodable video frame near EOF)
+                        # must not fail the whole job — skip it and continue.
+                        continue
                     frame = Frame(
                         job_id=job.id,
                         timestamp_seconds=ts,
@@ -92,6 +98,9 @@ def process_job(job_id: int) -> None:
                     job.frames_done += 1
                     session.add(job)
                     session.commit()
+
+                if job.frames_done == 0:
+                    raise RuntimeError("No frames could be extracted from the video")
 
                 # Best-effort Whisper fallback: only when no captions were found.
                 if (
